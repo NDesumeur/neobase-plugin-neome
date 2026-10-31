@@ -367,7 +367,6 @@ async function petStart() {
   addEventListener('beforeunload', () => { petAge(); __storeSet('pet', pet); });
 }
 const petToggle = () => { if (!pet) return; if (pet.inBar) return petToBar(false); pet.hidden = !pet.hidden; petSave(); petShow(); petBarSync(); toast(pet.hidden ? pet.name + ' se cache' : pet.name + ' est de retour !'); if (!pet.hidden) { petSay('Me revoilà !'); petAct('hello', 2000); } };
-host.menuItem('NeoMe', 'montrer ou cacher le pet de l’accueil', petToggle);
 if (window.neo && !W2) petStart().catch(e => console.error('pet:', e));
   // ---- fin ----
   view.querySelector('#nmToggle').onclick = () => petToggle();

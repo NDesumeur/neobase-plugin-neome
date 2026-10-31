@@ -1,9 +1,0 @@
-{
-  "pluginId": "neobase.neome",
-  "repo": "NDesumeur/neobase-plugin-neome",
-  "version": "1.0.0",
-  "sha256": "c429a6fa8c58cf08eb0859d65e409ca78fa135991588d30fe91211ca4d97371c",
-  "approvedAt": "2026-10-31T17:51:20.972Z",
-  "neobase": ">=4.0.0",
-  "signature": "/M7U/wRwBYX2AmKN7LXgqi65JziohRktuRawZU6118KhAFznZMqk9gvvBxL+29G3opowJIa8YKYn9kwMii5uBw=="
-}
