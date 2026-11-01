@@ -1,7 +1,7 @@
 {
   "id": "neobase.neome",
   "name": "NeoMe",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": "NDesumeur",
   "description": "Ton compagnon : il vit sur l'accueil et dans la barre des tâches, a faim, joue, dort, danse sur ta musique et réagit à ce que tu fais.",
   "icon": "icon.png",
@@ -11,7 +11,7 @@
   "type": "app",
   "category": "Compagnon",
   "mobile": false,
-  "system": false,
+  "system": true,
   "dependencies": {},
   "permissions": [
     "full"
