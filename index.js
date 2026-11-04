@@ -1,7 +1,7 @@
 // NeoMe : ton compagnon d'origine (code inchangé), livré en plugin avec ses 25 images et son style.
-// Son état (nom, niveau, humeur…) est dans le dossier du plugin, que NeoBase sauvegarde (synchro cloud comprise) ; à la première ouverture il reprend ton NeoMe d'avant.
-// Il demande l'accès complet pour vivre dans la page de NeoBase. NeoBase ne le charge que s'il est signé.
-const HTML = "<div class=\"appWrap\"><div class=\"agHead\"><span class=\"label\">NeoMe</span></div><div class=\"hint\">NeoMe vit sur l'accueil de NeoBase et se balade dans la barre des tâches : clique-le, chatouille-le, nourris-le et joue à la balle avec lui (clic droit).</div><div class=\"row\"><button class=\"btn main px\" id=\"nmToggle\">MONTRER / CACHER NEOME</button></div></div>";
+// Son état (nom, niveau, humeur…) est dans le dossier du plugin, que NeoDex sauvegarde (synchro cloud comprise) ; à la première ouverture il reprend ton NeoMe d'avant.
+// Il demande l'accès complet pour vivre dans la page de NeoDex. NeoDex ne le charge que s'il est signé.
+const HTML = "<div class=\"appWrap\"><div class=\"agHead\"><span class=\"label\">NeoMe</span></div><div class=\"hint\">NeoMe vit sur l'accueil de NeoDex et se balade dans la barre des tâches : clique-le, chatouille-le, nourris-le et joue à la balle avec lui (clic droit).</div><div class=\"row\"><button class=\"btn main px\" id=\"nmToggle\">MONTRER / CACHER NEOME</button></div></div>";
 const PET_CSS = `/* NeoMe, the pet of the home page (pet.js): its pictures, and its motions */
 #pet{position:fixed;left:20px;bottom:-16px;z-index:40;user-select:none}
 #pet img{display:block;width:181px;height:auto;cursor:var(--cp,pointer);touch-action:none;filter:drop-shadow(0 6px 6px rgba(0,0,0,.45));transform-origin:50% 85%}
@@ -39,7 +39,7 @@ body.browsing #pet,body.browsing .petBall,body.browsing .petBallShadow,body.brow
 .petStat b{height:8px;background:rgba(0,0,0,.35);box-shadow:inset 0 0 0 1px var(--line2)} .petStat i{display:block;height:100%;background:var(--magenta)} .petMenu input{font:15px var(--text);padding:6px}`;
 export default async function (ctx) {
   const view = ctx.view;
-  if (!ctx.host) { view.textContent = "Ce plugin doit être approuvé par NeoBase pour s'ouvrir."; return; }
+  if (!ctx.host) { view.textContent = "Ce plugin doit être approuvé par NeoDex pour s'ouvrir."; return; }
   const host = ctx.host, { el, sfx, ask, newTab, pixIcon, PIX, WX } = host;  // (toast et showTab : ceux de la page, NeoMe les enveloppe comme avant)
   const folder = ctx.folder;
   const $ = id => document.getElementById(id);
@@ -62,7 +62,7 @@ export default async function (ctx) {
 /* ---------- NeoMe, the pet of the home page: a little horned shadow with glowing eyes and headphones, in a broken egg shell.
    Its 25 expressions are pictures (web/pet/1..25.png, cut by tools/cut-neome.py); the motions are CSS animations on top (breathing,
    hops, trembling, dizzy sway, glitch...); it keeps the colours of its drawings.
-   It lives: hunger, joy and energy go down with time (even while NeoBase is closed); it sleeps at night or when left alone, dances to
+   It lives: hunger, joy and energy go down with time (even while NeoDex is closed); it sleeps at night or when left alone, dances to
    NeoMusic, watches the search bar and the notifications, greets you when you come back home, and does small things by itself.
    You pet it (click), tickle it (double click), carry it (drag), shake the mouse over it, feed it and play ball with it (right click).
    Its state is the "pet" store (more-main.js), in the synced save: the same pet on every PC. ---------- */
@@ -211,7 +211,7 @@ function petBall() {
   }
   const step = () => {
     if (petSt.ball !== s) return;
-    if (document.body.classList.contains('browsing') || pet.hidden) { s.over = false; return end(''); }  // only on NeoBase's home page
+    if (document.body.classList.contains('browsing') || pet.hidden) { s.over = false; return end(''); }  // only on NeoDex's home page
     const A = area(), now = Date.now(), k = Math.min(4, (now - (s.last || now - 16)) / 16.7); s.last = now;  // k: frames of 60 Hz since the last step
     if (!s.held) {
       s.vy += .75 * k; s.x += s.vx * k; s.y += s.vy * k; s.vx *= .996 ** k; s.spin += s.vx * 2 * k;
@@ -303,7 +303,7 @@ function petShow() {
   const p = pet.pos; if (p) Object.assign(petBox.style, {left: Math.round(p.x * innerWidth) + 'px', top: Math.round(p.y * innerHeight) + 'px', bottom: 'auto'});
 }
 
-/* ---------- setting up: the element, the pointer, the hooks into NeoBase ---------- */
+/* ---------- setting up: the element, the pointer, the hooks into NeoDex ---------- */
 async function petStart() {
   pet = {...petNew(), ...(await __storeGet('pet').catch(() => null) || {})};
   if (pet.name === 'Osu') pet.name = 'NeoMe';  // the first pet's name
