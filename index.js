@@ -290,7 +290,7 @@ function petMenu(x, y) {
     ok.onclick = done; i.onkeydown = e => { if (e.key === 'Enter') done(); if (e.key === 'Escape') f.remove(); };
     f.append(el('div', 'petTitle', 'Son nom'), i, ok); Object.assign(f.style, {left: x + 'px', top: y + 'px'}); document.body.append(f); i.focus(); i.select();
   });
-  act('Garde-robe…', () => newTab('plugin:neodex.neome'));
+  act('Son niveau…', () => newTab('plugin:neodex.neome'));
   act('Mettre dans la barre des tâches', () => petToBar(true));
   act('Cacher (MENU pour le remettre)', () => { pet.hidden = true; petSave(); petShow(); });
   m.append(el('div', 'hint', `${pet.pets} câlins · ${pet.meals} repas · record à la balle : ${pet.ballBest || 0} · né le ${new Date(pet.born).toLocaleDateString('fr-FR')}`));
@@ -406,7 +406,8 @@ const COS_CODE = [
   {id: 'aura_rose', slot: 'aura', name: 'Aura rose', lv: 6, glow: '#ff4fa8'}, {id: 'aura_glace', slot: 'aura', name: 'Aura glacée', lv: 10, glow: '#5ec8ff'},
   {id: 'aura_or', slot: 'aura', name: 'Aura dorée', lv: 13, glow: '#ffd84a'}, {id: 'aura_arc', slot: 'aura', name: 'Aura arc-en-ciel', lv: 16, glow: 'rainbow'},
 ];
-let COS = [...COS_CODE], COS_OFF = {}, COS_BODY = {}, COQ = {};
+// shortcut: plus aucun cosmétique (ceux d'avant ne rendaient pas bien) ; le moteur reste pour une future série dessinée par le modèle du Studio
+let COS = [], COS_OFF = {}, COS_BODY = {}, COQ = {};
 const cosUrl = {}, __hp = {};
 const blobUrl = async p => URL.createObjectURL(new Blob([Uint8Array.from(atob(await neo.pluginFileRead(ctx.id, p)), ch => ch.charCodeAt(0))], {type: 'image/png'}));
 async function cosLoad() {
@@ -501,7 +502,7 @@ function nmRender() {
   const lv = petLevel(pet.xp), lo = 8 * (lv - 1) ** 2, hi = 8 * lv ** 2, on = cosOn(), next = COS.find(c => c.lv > lv);
   box.querySelector('.nmName').textContent = pet.name + ' · niveau ' + lv;
   box.querySelector('.nmXp i').style.width = Math.round((pet.xp - lo) / (hi - lo) * 100) + '%';
-  box.querySelector('.nmXpTxt').textContent = `${pet.xp - lo} / ${hi - lo} XP vers le niveau ${lv + 1} · ${COS.filter(c => c.lv <= lv).length} / ${COS.length} cosmétiques` + (next ? ` · prochain : ${next.name} (niveau ${next.lv})` : '');
+  box.querySelector('.nmXpTxt').textContent = `${pet.xp - lo} / ${hi - lo} XP vers le niveau ${lv + 1}` + (COS.length ? ` · ${COS.filter(c => c.lv <= lv).length} / ${COS.length} cosmétiques` : '') + (next ? ` · prochain : ${next.name} (niveau ${next.lv})` : '');
   box.querySelector('.nmTabs').replaceChildren(...['tout', ...Object.keys(COS_SLOTS)].map(s => {
     const b = el('button', 'nmTab' + (nmSlot === s ? ' on' : ''), s === 'tout' ? 'Tout' : COS_SLOTS[s]);
     b.onclick = () => { nmSlot = s; nmRender(); }; return b;
@@ -521,14 +522,15 @@ function nmRender() {
 function nmView() {
   const box = el('div'); box.id = 'nmMain';
   box.innerHTML = `<div class="nmCard"><div><div class="label nmName"></div><div class="nmXp"><i></i></div><div class="hint nmXpTxt"></div>
-    <div class="hint">Il gagne de l'XP quand tu t'occupes de lui : câlins, repas, balle, musique… Passe sur un objet pour l'essayer, clique pour le porter.</div></div></div>
-    <div class="nmDress"><div class="nmStage"><div class="nmDoll"><img alt=""></div><button class="btn px nmOff">Tout retirer</button></div>
+    <div class="hint">Il gagne de l'XP quand tu t'occupes de lui : câlins, repas, balle, musique… </div></div></div>
+    <div class="nmDress" hidden><div class="nmStage"><div class="nmDoll"><img alt=""></div><button class="btn px nmOff">Tout retirer</button></div>
     <div class="nmSide"><h3>GARDE-ROBE</h3><div class="nmTabs"></div><div class="nmWard"></div></div></div>`;
+  box.querySelector('.nmDress').hidden = !COS.length;
   box.querySelector('.nmOff').onclick = () => { pet.wear = {}; petSave(); cosWear(); nmRender(); };
   const wrap = view.querySelector('.appWrap'); wrap.classList.add('nmApp'); wrap.append(box);
   nmRender();
 }
-if (window.neo && !W2) cosLoad().catch(e => console.error('garde-robe:', e)).then(petStart).then(nmView).catch(e => console.error('pet:', e));
+if (window.neo && !W2) Promise.resolve().then(petStart).then(nmView).catch(e => console.error('pet:', e));
   // ---- fin ----
   view.querySelector('#nmToggle').onclick = () => petToggle();
   ctx.onClose(() => { document.getElementById('pet')?.remove(); document.getElementById('petStyle')?.remove(); });
