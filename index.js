@@ -389,8 +389,9 @@ async function petStart() {
 }
 const petToggle = () => { if (!pet) return; if (pet.inBar) return petToBar(false); pet.hidden = !pet.hidden; petSave(); petShow(); petBarSync(); toast(pet.hidden ? pet.name + ' se cache' : pet.name + ' est de retour !'); if (!pet.hidden) { petSay('Me revoilà !'); petAct('hello', 2000); } };
 /* ---------- the wardrobe: cosmetics drawn by the Studio's AI on NeoMe himself (img/cos), unlocked by level, worn on the home page ---------- */
-// each one is a 320 x 330 layer cut from « NeoMe wearing it », so it sits exactly on his picture; head things follow the head (offsets per picture, in img/cos/items.json).
-// Coloured headphones are his own (img/hp, one per picture), recoloured.
+// each one is a 320 x 330 layer cut from « NeoMe wearing it », so it sits exactly on his picture; head things follow the head, shells and
+// neck things the body (offsets per picture, in img/cos/items.json: offsets, body). A shell also gets, on the pictures whose shell rim is
+// drawn higher, a small patch that covers that rim (img/cos/coq). Coloured headphones: only the magenta of his own (img/hp, one per picture), recoloured.
 const COS_SLOTS = {yeux: 'Yeux', casque: 'Casque', cou: 'Cou', coquille: 'Coquille', aura: 'Aura'};
 const COS_ORDER = ['coquille', 'cou', 'casque', 'yeux'];  // drawn from back to front
 const COS_HEAD = new Set(['yeux']);
@@ -405,12 +406,12 @@ const COS_CODE = [
   {id: 'aura_rose', slot: 'aura', name: 'Aura rose', lv: 6, glow: '#ff4fa8'}, {id: 'aura_glace', slot: 'aura', name: 'Aura glacée', lv: 10, glow: '#5ec8ff'},
   {id: 'aura_or', slot: 'aura', name: 'Aura dorée', lv: 13, glow: '#ffd84a'}, {id: 'aura_arc', slot: 'aura', name: 'Aura arc-en-ciel', lv: 16, glow: 'rainbow'},
 ];
-let COS = [...COS_CODE], COS_OFF = {};
+let COS = [...COS_CODE], COS_OFF = {}, COS_BODY = {}, COQ = {};
 const cosUrl = {}, __hp = {};
 const blobUrl = async p => URL.createObjectURL(new Blob([Uint8Array.from(atob(await neo.pluginFileRead(ctx.id, p)), ch => ch.charCodeAt(0))], {type: 'image/png'}));
 async function cosLoad() {
   const meta = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(await neo.pluginFileRead(ctx.id, 'img/cos/items.json')), ch => ch.charCodeAt(0))));
-  COS_OFF = meta.offsets || {};
+  COS_OFF = meta.offsets || {}; COS_BODY = meta.body || {}; COQ = meta.coq || {};
   COS = [...meta.items, ...COS_CODE].sort((a, b) => a.lv - b.lv);
   await Promise.all([...meta.items.map(async c => { cosUrl[c.id] = await blobUrl('img/cos/' + c.id + '.png'); }),
     ...Array.from({length: 25}, (_, i) => i + 1).map(async n => { __hp[n] = await blobUrl('img/hp/' + n + '.png'); })]);
@@ -420,27 +421,59 @@ const cosOk = c => !!c && petLevel(pet.xp) >= c.lv;
 const cosWorn = () => Object.fromEntries(Object.entries(cosOn()).filter(([, id]) => cosOk(COS.find(o => o.id === id))));
 const auraFilter = a => a && a.glow !== 'rainbow' ? `drop-shadow(0 0 9px ${a.glow}) drop-shadow(0 6px 6px rgba(0,0,0,.45))` : '';
 // an outfit: the base picture and the layers on top; face: which of the 25 pictures
+const cosAt = (i, [dx, dy], bb = [0, 0, 320, 330]) => Object.assign(i.style, {left: (bb[0] + dx) / 3.2 + '%', top: (bb[1] + dy) / 3.3 + '%', width: (bb[2] - bb[0]) / 3.2 + '%'});
+// the patch of a shell for this picture (loaded the first time it is needed)
+const coqUrl = {};
+async function coqPatch(i, id, face) {
+  const bb = COQ[id]?.[face]; i.hidden = !bb; if (!bb) return;
+  const k = id + '@' + face; coqUrl[k] ??= blobUrl('img/cos/coq/' + k + '.png');
+  i.src = await coqUrl[k]; cosAt(i, COS_BODY[face] || [0, 0], bb);
+}
 function cosLayers(box, base, wear, face = 1) {
   box.querySelectorAll('.cosL').forEach(n => n.remove());
   base.src = __imgs[face + '.png'];
-  const [dx, dy] = COS_OFF[face] || [0, 0];
   for (const slot of COS_ORDER) {
     const c = COS.find(o => o.id === wear[slot]); if (!c) continue;
     const src = c.hp ? __hp[face] : cosUrl[c.id]; if (!src) continue;
     const i = el('img', 'cosL' + (c.hp === 'rainbow' ? ' hpRainbow' : '')); i.src = src; i.alt = '';
     if (c.hp) { i.dataset.hp = 1; if (c.hp !== 'rainbow') i.style.filter = c.hp; }
-    else if (COS_HEAD.has(slot)) { i.dataset.head = 1; Object.assign(i.style, {left: dx / 3.2 + '%', top: dy / 3.3 + '%'}); }
+    else if (COS_HEAD.has(slot)) { i.dataset.head = 1; cosAt(i, COS_OFF[face] || [0, 0]); }
+    else { i.dataset.body = 1; cosAt(i, COS_BODY[face] || [0, 0]); }
     box.append(i);
+    if (slot === 'coquille' && COQ[c.id]) { const p = el('img', 'cosL'); p.alt = ''; p.dataset.coq = c.id; box.append(p); coqPatch(p, c.id, face); }
   }
 }
-function cosFace(n) {  // the pet changes face: its base picture, its headphones and what sits on its head follow
-  const wear = cosWorn(), [dx, dy] = COS_OFF[n] || [0, 0];
+function cosFace(n) {  // the pet changes face: its base picture, its headphones, what sits on its head and its shell follow
   petImg.src = __imgs[n + '.png'];
   petCos.querySelectorAll('.cosL[data-hp]').forEach(i => { i.src = __hp[n]; });
-  petCos.querySelectorAll('.cosL[data-head]').forEach(i => Object.assign(i.style, {left: dx / 3.2 + '%', top: dy / 3.3 + '%'}));
+  petCos.querySelectorAll('.cosL[data-head]').forEach(i => cosAt(i, COS_OFF[n] || [0, 0]));
+  petCos.querySelectorAll('.cosL[data-body]').forEach(i => cosAt(i, COS_BODY[n] || [0, 0]));
+  petCos.querySelectorAll('.cosL[data-coq]').forEach(i => coqPatch(i, i.dataset.coq, n));
+}
+// the taskbar (another window) gets NeoMe's pictures with his outfit drawn in
+const TB_FACES = [1, 2, 3, 4, 8, 9, 10, 15, 17, 21, 22, 25];
+const imgOf = src => new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = src; });
+async function cosBarImgs() {
+  if (!neo.tbPetImgs) return;
+  const wear = cosWorn(), a = COS.find(o => o.id === wear.aura), out = {};
+  for (const n of TB_FACES) {
+    const cv = document.createElement('canvas'); cv.width = 320; cv.height = 330; const g = cv.getContext('2d');
+    g.filter = auraFilter(a) || (a?.glow === 'rainbow' ? 'drop-shadow(0 0 9px #b46bff)' : 'none'); g.drawImage(await imgOf(__imgs[n + '.png']), 0, 0); g.filter = 'none';
+    for (const slot of COS_ORDER) {
+      const c = COS.find(o => o.id === wear[slot]); if (!c) continue;
+      const src = c.hp ? __hp[n] : cosUrl[c.id]; if (!src) continue;
+      const [dx, dy] = c.hp ? [0, 0] : (COS_HEAD.has(slot) ? COS_OFF : COS_BODY)[n] || [0, 0];
+      g.filter = c.hp ? (c.hp === 'rainbow' ? 'hue-rotate(120deg)' : c.hp) : 'none'; g.drawImage(await imgOf(src), dx, dy); g.filter = 'none';
+      const bb = slot === 'coquille' && COQ[c.id]?.[n];
+      if (bb) { const k = c.id + '@' + n; coqUrl[k] ??= blobUrl('img/cos/coq/' + k + '.png'); g.drawImage(await imgOf(await coqUrl[k]), bb[0] + dx, bb[1] + dy); }
+    }
+    out[n] = cv.toDataURL('image/png');
+  }
+  neo.tbPetImgs(out);
 }
 function cosWear() {
   if (!petCos || !pet) return;
+  cosBarImgs().catch(e => console.error('NeoMe, barre des tâches :', e));
   const wear = cosWorn(), a = COS.find(o => o.id === wear.aura);
   cosLayers(petCos, petImg, wear, (NM[petSt.mode] || NM.idle)[0]);
   petBox.classList.toggle('aura-rainbow', a?.glow === 'rainbow'); petImg.style.filter = auraFilter(a);
