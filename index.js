@@ -328,7 +328,7 @@ async function petStart() {
   pet = {...petNew(), ...(await __storeGet('pet').catch(() => null) || {})};
   if (pet.name === 'Osu') pet.name = 'NeoMe';  // the first pet's name
   petAge();
-  for (const [n] of Object.values(NM)) { new Image().src = __imgs[n + '.png']; if (__nohp[n]) new Image().src = __nohp[n]; }  // all the expressions ready: no blink when it changes face
+  for (const [n] of Object.values(NM)) { new Image().src = __imgs[n + '.png']; }  // all the expressions ready: no blink when it changes face
   petBox = el('div'); petBox.id = 'pet';
   petImg = el('img'); petImg.alt = ''; petImg.draggable = false;
   petCos = el('div', 'petCos');
@@ -390,10 +390,10 @@ async function petStart() {
 const petToggle = () => { if (!pet) return; if (pet.inBar) return petToBar(false); pet.hidden = !pet.hidden; petSave(); petShow(); petBarSync(); toast(pet.hidden ? pet.name + ' se cache' : pet.name + ' est de retour !'); if (!pet.hidden) { petSay('Me revoilà !'); petAct('hello', 2000); } };
 /* ---------- the wardrobe: cosmetics drawn by the Studio's AI on NeoMe himself (img/cos), unlocked by level, worn on the home page ---------- */
 // each one is a 320 x 330 layer cut from « NeoMe wearing it », so it sits exactly on his picture; head things follow the head (offsets per picture, in img/cos/items.json).
-// A hat takes his headphones off: img/nohp holds his 25 pictures without them. Coloured headphones are his own (img/hp, one per picture), recoloured.
-const COS_SLOTS = {tete: 'Tête', yeux: 'Yeux', casque: 'Casque', cou: 'Cou', coquille: 'Coquille', aura: 'Aura'};
-const COS_ORDER = ['coquille', 'cou', 'casque', 'yeux', 'tete'];  // drawn from back to front
-const COS_HEAD = new Set(['tete', 'yeux']);
+// Coloured headphones are his own (img/hp, one per picture), recoloured.
+const COS_SLOTS = {yeux: 'Yeux', casque: 'Casque', cou: 'Cou', coquille: 'Coquille', aura: 'Aura'};
+const COS_ORDER = ['coquille', 'cou', 'casque', 'yeux'];  // drawn from back to front
+const COS_HEAD = new Set(['yeux']);
 const COS_CODE = [
   {id: 'casque_cyan', slot: 'casque', name: 'Casque néon cyan', lv: 3, hp: 'hue-rotate(-100deg) saturate(1.2)'},
   {id: 'casque_citron', slot: 'casque', name: 'Casque citron', lv: 4, hp: 'hue-rotate(160deg) saturate(1.3) brightness(1.15)'},
@@ -406,25 +406,23 @@ const COS_CODE = [
   {id: 'aura_or', slot: 'aura', name: 'Aura dorée', lv: 13, glow: '#ffd84a'}, {id: 'aura_arc', slot: 'aura', name: 'Aura arc-en-ciel', lv: 16, glow: 'rainbow'},
 ];
 let COS = [...COS_CODE], COS_OFF = {};
-const cosUrl = {}, __nohp = {}, __hp = {};
+const cosUrl = {}, __hp = {};
 const blobUrl = async p => URL.createObjectURL(new Blob([Uint8Array.from(atob(await neo.pluginFileRead(ctx.id, p)), ch => ch.charCodeAt(0))], {type: 'image/png'}));
 async function cosLoad() {
   const meta = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(await neo.pluginFileRead(ctx.id, 'img/cos/items.json')), ch => ch.charCodeAt(0))));
   COS_OFF = meta.offsets || {};
   COS = [...meta.items, ...COS_CODE].sort((a, b) => a.lv - b.lv);
   await Promise.all([...meta.items.map(async c => { cosUrl[c.id] = await blobUrl('img/cos/' + c.id + '.png'); }),
-    ...Array.from({length: 25}, (_, i) => i + 1).map(async n => { __nohp[n] = await blobUrl('img/nohp/' + n + '.png'); __hp[n] = await blobUrl('img/hp/' + n + '.png'); })]);
+    ...Array.from({length: 25}, (_, i) => i + 1).map(async n => { __hp[n] = await blobUrl('img/hp/' + n + '.png'); })]);
 }
 const cosOn = () => (pet.wear && typeof pet.wear === 'object') ? pet.wear : (pet.wear = {});
 const cosOk = c => !!c && petLevel(pet.xp) >= c.lv;
 const cosWorn = () => Object.fromEntries(Object.entries(cosOn()).filter(([, id]) => cosOk(COS.find(o => o.id === id))));
 const auraFilter = a => a && a.glow !== 'rainbow' ? `drop-shadow(0 0 9px ${a.glow}) drop-shadow(0 6px 6px rgba(0,0,0,.45))` : '';
-const bare = wear => !!(wear.tete || wear.casque);  // without his own headphones: a hat, or recoloured ones
-const faceSrc = (wear, n) => bare(wear) && __nohp[n] ? __nohp[n] : __imgs[n + '.png'];
-// an outfit: the base picture (with or without headphones) and the layers on top; face: which of the 25 pictures
+// an outfit: the base picture and the layers on top; face: which of the 25 pictures
 function cosLayers(box, base, wear, face = 1) {
   box.querySelectorAll('.cosL').forEach(n => n.remove());
-  base.src = faceSrc(wear, face);
+  base.src = __imgs[face + '.png'];
   const [dx, dy] = COS_OFF[face] || [0, 0];
   for (const slot of COS_ORDER) {
     const c = COS.find(o => o.id === wear[slot]); if (!c) continue;
@@ -437,7 +435,7 @@ function cosLayers(box, base, wear, face = 1) {
 }
 function cosFace(n) {  // the pet changes face: its base picture, its headphones and what sits on its head follow
   const wear = cosWorn(), [dx, dy] = COS_OFF[n] || [0, 0];
-  petImg.src = faceSrc(wear, n);
+  petImg.src = __imgs[n + '.png'];
   petCos.querySelectorAll('.cosL[data-hp]').forEach(i => { i.src = __hp[n]; });
   petCos.querySelectorAll('.cosL[data-head]').forEach(i => Object.assign(i.style, {left: dx / 3.2 + '%', top: dy / 3.3 + '%'}));
 }
@@ -450,8 +448,6 @@ function cosWear() {
 function cosToggle(c) {
   if (!cosOk(c)) return;
   const on = cosOn(); on[c.slot] = on[c.slot] === c.id ? '' : c.id;
-  if (on[c.slot] && c.slot === 'tete') on.casque = '';  // a hat or headphones, not both
-  if (on[c.slot] && c.slot === 'casque') on.tete = '';
   petSave(); cosWear(); nmRender();
   if (on[c.slot]) { petAct('cool', 1800); petSay(['Trop classe !', 'Ça me va bien ?', 'Stylé !', 'J’adore !'][Math.random() * 4 | 0], 1800); }
 }
@@ -462,12 +458,9 @@ function nmDoll(box, wear) {
   const a = COS.find(o => o.id === wear.aura), base = box.querySelector('img');
   cosLayers(box, base, wear); box.classList.toggle('aura-rainbow', a?.glow === 'rainbow'); base.style.filter = auraFilter(a);
 }
-function nmTryOn() {  // what the big NeoMe shows: what he wears, plus the item under the pointer (a hat takes the headphones off)
+function nmTryOn() {  // what the big NeoMe shows: what he wears, plus the item under the pointer 
   const w = cosWorn(); if (!nmTry) return w;
-  const t = {...w, [nmTry.slot]: nmTry.id};
-  if (nmTry.slot === 'tete') delete t.casque;
-  if (nmTry.slot === 'casque') delete t.tete;
-  return t;
+  return {...w, [nmTry.slot]: nmTry.id};
 }
 const nmPreview = () => { const box = view.querySelector('.nmDoll'); if (box) nmDoll(box, nmTryOn()); };
 function nmRender() {
@@ -495,7 +488,7 @@ function nmRender() {
 function nmView() {
   const box = el('div'); box.id = 'nmMain';
   box.innerHTML = `<div class="nmCard"><div><div class="label nmName"></div><div class="nmXp"><i></i></div><div class="hint nmXpTxt"></div>
-    <div class="hint">Il gagne de l'XP quand tu t'occupes de lui : câlins, repas, balle, musique… Passe sur un objet pour l'essayer, clique pour le porter. Un chapeau remplace son casque.</div></div></div>
+    <div class="hint">Il gagne de l'XP quand tu t'occupes de lui : câlins, repas, balle, musique… Passe sur un objet pour l'essayer, clique pour le porter.</div></div></div>
     <div class="nmDress"><div class="nmStage"><div class="nmDoll"><img alt=""></div><button class="btn px nmOff">Tout retirer</button></div>
     <div class="nmSide"><h3>GARDE-ROBE</h3><div class="nmTabs"></div><div class="nmWard"></div></div></div>`;
   box.querySelector('.nmOff').onclick = () => { pet.wear = {}; petSave(); cosWear(); nmRender(); };
