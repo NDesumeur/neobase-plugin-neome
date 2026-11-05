@@ -1,9 +1,9 @@
 {
   "id": "neodex.neome",
   "name": "NeoMe",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "author": "NDesumeur",
-  "description": "Ton compagnon : il vit sur l'accueil et dans la barre des tâches, a faim, joue, dort, danse sur ta musique et réagit à ce que tu fais.",
+  "description": "Ton compagnon : il vit sur l'accueil et dans la barre des tâches, a faim, joue, dort, danse sur ta musique, monte de niveau et débloque une garde-robe de 15 cosmétiques ; et son mini-jeu, Pluie d'étoiles.",
   "icon": "icon.png",
   "entry": "index.js",
   "view": "neome",

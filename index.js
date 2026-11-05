@@ -36,7 +36,18 @@ body.browsing #pet,body.browsing .petBall,body.browsing .petBallShadow,body.brow
 .petMenu{position:fixed;z-index:200;display:flex;flex-direction:column;gap:4px;min-width:220px;padding:12px;background:var(--win);box-shadow:0 0 0 2px var(--line2),0 4px 0 2px #05010b}
 .petMenu button{all:unset;cursor:var(--cp,pointer);padding:6px 8px;color:var(--shell);font:15px var(--text)} .petMenu button:hover{background:rgba(var(--pkr),.2);color:#fff}
 .petTitle{font:9px var(--title);color:var(--lilac);margin-bottom:6px} .petStat{display:grid;grid-template-columns:70px 1fr;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
-.petStat b{height:8px;background:rgba(0,0,0,.35);box-shadow:inset 0 0 0 1px var(--line2)} .petStat i{display:block;height:100%;background:var(--magenta)} .petMenu input{font:15px var(--text);padding:6px}`;
+.petStat b{height:8px;background:rgba(0,0,0,.35);box-shadow:inset 0 0 0 1px var(--line2)} .petStat i{display:block;height:100%;background:var(--magenta)} .petMenu input{font:15px var(--text);padding:6px}
+.petCos{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;transform-origin:50% 85%}
+.petCos img{position:absolute;image-rendering:pixelated;height:auto}
+@keyframes nmRainbow{0%{filter:drop-shadow(0 0 9px #ff4fa8) drop-shadow(0 6px 6px rgba(0,0,0,.45))}33%{filter:drop-shadow(0 0 9px #5ec8ff) drop-shadow(0 6px 6px rgba(0,0,0,.45))}66%{filter:drop-shadow(0 0 9px #ffd84a) drop-shadow(0 6px 6px rgba(0,0,0,.45))}}
+#pet.aura-rainbow>img{animation:nmRainbow 3s infinite!important}
+.nmApp .nmCard{display:flex;gap:18px;align-items:center;flex-wrap:wrap}.nmApp .nmCard img{width:96px}
+.nmApp .nmXp{height:12px;min-width:220px;background:rgba(0,0,0,.35);box-shadow:inset 0 0 0 2px var(--line2);margin:6px 0}.nmApp .nmXp i{display:block;height:100%;background:var(--pink)}
+.nmApp canvas.nmGame{width:640px;max-width:100%;image-rendering:pixelated;box-shadow:0 0 0 2px var(--line2);cursor:none;touch-action:none;display:block}
+.nmApp .nmWard{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.nmApp .nmItem{all:unset;cursor:var(--cp,pointer);display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;background:rgba(0,0,0,.25);box-shadow:inset 0 0 0 2px var(--line2);font:13px var(--text);color:var(--shell);text-align:center}
+.nmApp .nmItem canvas{width:64px;height:40px;image-rendering:pixelated;object-fit:contain}.nmApp .nmItem.on{box-shadow:inset 0 0 0 2px var(--pink);color:#fff}
+.nmApp .nmItem.locked{opacity:.45;cursor:default}.nmApp .nmItem small{color:var(--muted)}.nmApp h3{font:10px var(--title);color:var(--lilac);margin:18px 0 8px}`;
 export default async function (ctx) {
   const view = ctx.view;
   if (!ctx.host) { view.textContent = "Ce plugin doit être approuvé par NeoDex pour s'ouvrir."; return; }
@@ -75,7 +86,7 @@ const NM = {
   joy: [23, 'bounce'], scared: [24, 'tremble'], hello: [25, 'hop'],
 };
 const petNew = () => ({name: 'NeoMe', born: Date.now(), xp: 0, food: 80, joy: 80, energy: 90, last: Date.now(), pos: null, hidden: false, pets: 0, meals: 0, ballBest: 0, inBar: false});
-let pet = null, petBox = null, petImg = null, petSaveT = 0;
+let pet = null, petBox = null, petImg = null, petCos = null, petSaveT = 0;
 const petSt = {mode: 'idle', act: null, until: 0, sleeping: false, idleAt: Date.now(), nextIdle: Date.now() + 6000, hover: false, near: false, said: 0, ball: null, shake: [], lastDir: 0, combo: 0, lastPet: 0, dizzies: []};
 const petLevel = xp => 1 + Math.floor(Math.sqrt(xp / 8));
 console.assert(petLevel(0) === 1 && petLevel(8) === 2 && petLevel(32) === 3, 'petLevel');
@@ -92,14 +103,16 @@ function petAge(now = Date.now()) {
 const petSave = () => { clearTimeout(petSaveT); petSaveT = setTimeout(() => __storeSet('pet', pet).catch(() => {}), 1500); };
 function petXp(n) {
   const before = petLevel(pet.xp); pet.xp += n; petSave();
-  if (petLevel(pet.xp) > before) { petAct('amazed', 2200); petSay('Niveau ' + petLevel(pet.xp) + ' !'); }
+  const now = petLevel(pet.xp);
+  if (now > before) { const got = COS.filter(c => c.lv > before && c.lv <= now); petAct('amazed', 2200); petSay('Niveau ' + now + ' !' + (got.length ? ' Nouveau : ' + got.map(c => c.name).join(', ') : '')); }
+  nmRender();
 }
 
 /* ---------- showing an expression ---------- */
 function petShowFace(name) {
   const [n, motion] = NM[name] || NM.idle;
   if (petImg.dataset.face !== name) { petImg.src = __imgs[n + '.png']; petImg.dataset.face = name; }
-  if (petImg.dataset.motion !== motion) { petImg.className = ''; void petImg.offsetWidth; petImg.className = 'nm-' + motion; petImg.dataset.motion = motion; }  // restarts the motion
+  if (petImg.dataset.motion !== motion) { petImg.className = petCos.className = ''; void petImg.offsetWidth; petImg.className = 'nm-' + motion; petCos.className = 'petCos nm-' + motion; petImg.dataset.motion = motion; }  // restarts the motion (the cosmetics move with it)
   petSt.mode = name;
 }
 // an expression for a while, then back to the mood
@@ -271,6 +284,7 @@ function petMenu(x, y) {
     ok.onclick = done; i.onkeydown = e => { if (e.key === 'Enter') done(); if (e.key === 'Escape') f.remove(); };
     f.append(el('div', 'petTitle', 'Son nom'), i, ok); Object.assign(f.style, {left: x + 'px', top: y + 'px'}); document.body.append(f); i.focus(); i.select();
   });
+  act('Garde-robe et Pluie d’étoiles…', () => newTab('plugin:neodex.neome'));
   act('Mettre dans la barre des tâches', () => petToBar(true));
   act('Cacher (MENU pour le remettre)', () => { pet.hidden = true; petSave(); petShow(); });
   m.append(el('div', 'hint', `${pet.pets} câlins · ${pet.meals} repas · record à la balle : ${pet.ballBest || 0} · né le ${new Date(pet.born).toLocaleDateString('fr-FR')}`));
@@ -311,7 +325,8 @@ async function petStart() {
   for (const [n] of Object.values(NM)) new Image().src = __imgs[n + '.png'];  // all the expressions ready: no blink when it changes face
   petBox = el('div'); petBox.id = 'pet';
   petImg = el('img'); petImg.alt = ''; petImg.draggable = false;
-  petBox.append(el('div', 'petBubble'), petImg); document.body.append(petBox);
+  petCos = el('div', 'petCos');
+  petBox.append(el('div', 'petBubble'), petImg, petCos); document.body.append(petBox); cosWear();
   petShowFace('idle'); petShow();
   // click / double click / drag / right click
   let down = null, clickT = 0;
@@ -367,7 +382,144 @@ async function petStart() {
   addEventListener('beforeunload', () => { petAge(); __storeSet('pet', pet); });
 }
 const petToggle = () => { if (!pet) return; if (pet.inBar) return petToBar(false); pet.hidden = !pet.hidden; petSave(); petShow(); petBarSync(); toast(pet.hidden ? pet.name + ' se cache' : pet.name + ' est de retour !'); if (!pet.hidden) { petSay('Me revoilà !'); petAct('hello', 2000); } };
-if (window.neo && !W2) petStart().catch(e => console.error('pet:', e));
+/* ---------- the wardrobe: pixel cosmetics unlocked by level, worn on the home page (a layer over the picture that moves with it) ---------- */
+// slot, name, level, where it sits on the picture (% of its width: left, top, width), pixels
+const COS_PAL = {k: '#14102a', r: '#e8344e', w: '#ffffff', d: '#2a2440', p: '#ff4fa8', c: '#5ec8ff', y: '#ffd84a', v: '#7a4cff', g: '#5ad05a', o: '#ff9a3c', m: '#8a80b0'};
+const COS = [
+  {id: 'cap', slot: 'hat', name: 'Casquette', lv: 2, at: [33, 9, 36], px: ['.....kkkkkkk......', '...kkrrrrrrrkk....', '..krrrrrwwrrrrk...', '.krrrrrrrrrrrrrk..', '.kkkkkkkkkkkkkkkkk', '..kddddddddddddddk']},
+  {id: 'bow', slot: 'hat', name: 'Nœud', lv: 3, at: [56, 12, 22], px: ['..kk......kk..', '.kppk....kppk.', 'kppppkkkkppppk', 'kpppkpwwpkpppk', 'kppppkkkkppppk', '.kppk....kppk.', '..kk......kk..']},
+  {id: 'round', slot: 'eyes', name: 'Lunettes rondes', lv: 4, at: [41, 38, 24], px: ['.yyyyy.......yyyyy.', 'y.....y.....y.....y', 'y.....yyyyyyy.....y', 'y.....y.....y.....y', '.yyyyy.......yyyyy.']},
+  {id: 'party', slot: 'hat', name: 'Chapeau de fête', lv: 5, at: [41, -2, 20], px: ['....yy....', '...yyyy...', '....kk....', '...kppk...', '...kpck...', '..kpccpk..', '..kcppck..', '.kppccppk.', '.kccppcck.', 'kppccppcck', 'kkkkkkkkkk']},
+  {id: 'shades', slot: 'eyes', name: 'Lunettes de soleil', lv: 6, at: [41, 38, 24], px: ['kkkkkkkkkkkkkkkkkkk', 'kdddwdk.....kdddwdk', 'kdddddk.....kdddddk', '.kdddk.......kdddk.', '..kkk.........kkk..']},
+  {id: 'pink', slot: 'aura', name: 'Aura rose', lv: 7, glow: '#ff4fa8'},
+  {id: 'crown', slot: 'hat', name: 'Couronne', lv: 8, at: [36, 5, 30], px: ['k......kk......k', 'kk....kyyk....kk', 'kyk..kyyyyk..kyk', 'kyyk.kyyyyk.kyyk', 'kyyykyyyyyykyyyk', 'kyyyyyyyyyyyyyyk', 'kyyrryyyyyyccyyk', 'kyyyyyyyyyyyyyyk', 'kkkkkkkkkkkkkkkk']},
+  {id: 'cyan', slot: 'aura', name: 'Aura glacée', lv: 9, glow: '#5ec8ff'},
+  {id: 'monocle', slot: 'eyes', name: 'Monocle', lv: 10, at: [57, 36, 10], px: ['..yyyy..', '.y....y.', 'y......y', 'y......y', 'y......y', '.y....y.', '..yyyy..', '......y.', '.......y']},
+  {id: 'wizard', slot: 'hat', name: 'Chapeau de sorcier', lv: 12, at: [34, -6, 32], px: ['.......kk.......', '......kvvk......', '......kvvk......', '.....kvvyvk.....', '.....kvvvvk.....', '....kvvvvvvk....', '....kvyvvvvk....', '...kvvvvvyvvk...', '...kvvvvvvvvk...', '..kvvvvvvvvvvk..', 'kkkkkkkkkkkkkkkk', 'kvvvvvvvvvvvvvvk', 'kkkkkkkkkkkkkkkk']},
+  {id: 'gold', slot: 'aura', name: 'Aura dorée', lv: 14, glow: '#ffd84a'},
+  {id: 'halo', slot: 'hat', name: 'Auréole', lv: 15, at: [34, 2, 32], px: ['...kkkkkkkkkk...', '.kkyyyyyyyyyykk.', 'kyy..........yyk', '.kkyyyyyyyyyykk.', '...kkkkkkkkkk...']},
+  {id: 'visor', slot: 'eyes', name: 'Visière néon', lv: 18, at: [37, 38, 32], px: ['.kkkkkkkkkkkkkkkkkk.', 'kcwcccccccccccccccck', 'kcccccccccccccccccck', '.kkkkkkkkkkkkkkkkkk.']},
+  {id: 'tophat', slot: 'hat', name: 'Haut-de-forme', lv: 20, at: [37, -4, 27], px: ['..kkkkkkkkkk..', '..kddddddddk..', '..kddddddddk..', '..kddddddddk..', '..kddddddddk..', '..kddddddddk..', '..krrrrrrrrk..', '..kddddddddk..', 'kkkkkkkkkkkkkk', 'kddddddddddddk', 'kkkkkkkkkkkkkk']},
+  {id: 'rainbow', slot: 'aura', name: 'Aura arc-en-ciel', lv: 25, glow: 'rainbow'},
+];
+console.assert(COS.every(c => !c.px || c.px.every(r => r.length === c.px[0].length)) && new Set(COS.map(c => c.id)).size === COS.length, 'garde-robe');
+const cosImg = {};
+function cosSprite(c) {  // the pixels drawn once to a small canvas (1 px = 1 px, scaled up crisp by CSS)
+  if (cosImg[c.id]) return cosImg[c.id];
+  const cv = document.createElement('canvas'); cv.width = c.px[0].length; cv.height = c.px.length; const g = cv.getContext('2d');
+  c.px.forEach((r, y) => [...r].forEach((ch, x) => { if (COS_PAL[ch]) { g.fillStyle = COS_PAL[ch]; g.fillRect(x, y, 1, 1); } }));
+  return cosImg[c.id] = cv.toDataURL();
+}
+const cosOn = () => pet.cos || (pet.cos = {hat: '', eyes: '', aura: ''});
+function cosWear() {
+  if (!petCos) return;
+  petCos.replaceChildren(); petImg.style.filter = ''; petBox.classList.remove('aura-rainbow');
+  for (const [slot, id] of Object.entries(cosOn())) {
+    const c = COS.find(o => o.id === id && o.slot === slot); if (!c || petLevel(pet.xp) < c.lv) continue;
+    if (c.glow === 'rainbow') petBox.classList.add('aura-rainbow');
+    else if (c.glow) petImg.style.filter = `drop-shadow(0 0 9px ${c.glow}) drop-shadow(0 6px 6px rgba(0,0,0,.45))`;
+    else { const i = el('img'); i.src = cosSprite(c); Object.assign(i.style, {left: c.at[0] + '%', top: c.at[1] + '%', width: c.at[2] + '%'}); petCos.append(i); }
+  }
+}
+function cosToggle(c) {
+  if (petLevel(pet.xp) < c.lv) return;
+  const on = cosOn(); on[c.slot] = on[c.slot] === c.id ? '' : c.id; petSave(); cosWear(); nmRender();
+  if (on[c.slot]) { petAct('cool', 1800); petSay(['Trop classe !', 'Ça me va bien ?', 'Stylé !'][Math.random() * 3 | 0], 1800); }
+}
+
+/* ---------- the plugin's tab: its level, the wardrobe, and the « Pluie d'étoiles » game (stars to catch, bombs to dodge: XP for NeoMe) ---------- */
+let nmGame = null;
+function nmRender() {
+  const box = view.querySelector('#nmMain'); if (!box || !pet) return;
+  const lv = petLevel(pet.xp), lo = 8 * (lv - 1) ** 2, hi = 8 * lv ** 2;
+  box.querySelector('.nmName').textContent = pet.name + ' · niveau ' + lv;
+  box.querySelector('.nmXp i').style.width = Math.round((pet.xp - lo) / (hi - lo) * 100) + '%';
+  box.querySelector('.nmXpTxt').textContent = `${pet.xp - lo} / ${hi - lo} XP vers le niveau ${lv + 1} · ${COS.filter(c => c.lv <= lv).length} / ${COS.length} cosmétiques`;
+  box.querySelector('.nmFace').src = __imgs['1.png'];
+  box.querySelector('.nmBest').textContent = 'Record : ' + (pet.starBest || 0);
+  const ward = box.querySelector('.nmWard'), on = cosOn(); ward.replaceChildren();
+  for (const c of COS) {
+    const b = el('button', 'nmItem' + (lv < c.lv ? ' locked' : '') + (on[c.slot] === c.id ? ' on' : '')), cv = el('canvas');
+    cv.width = 32; cv.height = 20; const g = cv.getContext('2d');
+    if (c.glow) (c.glow === 'rainbow' ? ['#ff4fa8', '#ffd84a', '#5ec8ff'] : [c.glow, c.glow, c.glow]).forEach((col, i) => { g.fillStyle = col; g.fillRect(8 + i * 6, 4 + (i % 2) * 3, 4, 12); });
+    else { const im = new Image(); im.onload = () => { const k = Math.min(32 / im.width, 20 / im.height); g.imageSmoothingEnabled = false; g.drawImage(im, (32 - im.width * k) / 2, (20 - im.height * k) / 2, im.width * k, im.height * k); }; im.src = cosSprite(c); }
+    b.append(cv, el('span', '', c.name), el('small', '', lv < c.lv ? 'niveau ' + c.lv : on[c.slot] === c.id ? 'porté ✓' : {hat: 'tête', eyes: 'yeux', aura: 'aura'}[c.slot]));
+    b.onclick = () => cosToggle(c); ward.append(b);
+  }
+}
+// the game: 160 x 100 pixels, shown at 4x; NeoMe follows the mouse (or ← →)
+const STAR = ['...y...', '..yyy..', 'yyyyyyy', '.yyyyy.', '.yy.yy.', 'y.....y'], BOMB = ['....o.', '...m..', '.mmmm.', 'mmwrmm', 'mmrrrm', 'mmmmmm', '.mmmm.'], NOTE = ['..ppp', '..p.p', '..p.p', 'ppp.p', 'ppp..'];
+function nmDraw(g, px, x, y, col) { px.forEach((r, j) => [...r].forEach((ch, i) => { if (ch !== '.') { g.fillStyle = col && ch === 'y' ? col : COS_PAL[ch]; g.fillRect(x + i, y + j, 1, 1); } })); }
+function nmPlay() {
+  const cv = view.querySelector('.nmGame'), g = cv.getContext('2d'), W = 160, H = 100;
+  const faces = {}; for (const k of ['joy', 'dizzy', 'sad', 'amazed', 'idle']) { faces[k] = new Image(); faces[k].src = __imgs[NM[k][0] + '.png']; }
+  if (nmGame) nmGame.stop();
+  const s = nmGame = {x: W / 2, tx: W / 2, items: [], score: 0, lives: 3, t: 0, face: 'idle', faceT: 0, over: false, last: performance.now(), keys: {}, spawn: 0};
+  const move = e => { const r = cv.getBoundingClientRect(); s.tx = (e.clientX - r.left) / r.width * W; };
+  cv.onpointermove = move; cv.onpointerdown = move;
+  const kd = e => { if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && view.offsetParent) { s.keys[e.key] = e.type === 'keydown'; e.preventDefault(); } };
+  addEventListener('keydown', kd); addEventListener('keyup', kd);
+  s.stop = () => { s.over = true; removeEventListener('keydown', kd); removeEventListener('keyup', kd); };
+  const end = () => {
+    s.stop();
+    const xp = Math.min(80, Math.floor(s.score / 3)), rec = s.score > (pet.starBest || 0);
+    if (rec) pet.starBest = s.score;
+    pet.joy = petClamp(pet.joy + 10); pet.energy = petClamp(pet.energy - 5);
+    if (xp) petXp(xp); else petSave();
+    nmRender(); view.querySelector('.nmMsg').textContent = `Partie finie : ${s.score} points${rec ? ' · nouveau record !' : ''} · +${xp} XP pour ${pet.name}`;
+    petAct(rec ? 'amazed' : 'content', 2000);
+  };
+  function draw() {
+    g.fillStyle = '#0e0820'; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 40; i++) { const x = (i * 37) % W, y = (i * 53 + s.t * (.1 + (i % 3) * .08)) % H; g.fillStyle = i % 3 ? '#2a2050' : '#3a2f6a'; g.fillRect(x | 0, y | 0, 1, 1); }
+    g.fillStyle = '#231a44'; g.fillRect(0, H - 6, W, 6);
+    for (const it of s.items) nmDraw(g, it.kind === 'bomb' ? BOMB : it.kind === 'note' ? NOTE : STAR, it.x | 0, it.y | 0, it.kind === 'gold' ? ((s.t / 6 | 0) % 2 ? '#ffffff' : '#ffd84a') : null);
+    g.imageSmoothingEnabled = true; g.drawImage(faces[s.face] || faces.idle, (s.x - 12) | 0, H - 28, 24, 25); g.imageSmoothingEnabled = false;
+    g.fillStyle = '#fff'; g.font = '8px monospace'; g.fillText(String(s.score), 4, 10);
+    for (let i = 0; i < 3; i++) { g.fillStyle = i < s.lives ? '#ff4fa8' : '#3a2f6a'; g.fillRect(W - 8 - i * 7, 4, 5, 5); }
+  }
+  const frame = now => {
+    if (s.over) return;
+    if (!view.isConnected) return s.stop();
+    const k = Math.min(3, (now - s.last) / 16.7); s.last = now;
+    if (view.offsetParent) {  // paused while the tab is hidden
+      s.t += k;
+      if (s.keys.ArrowLeft) s.tx = s.x - 6;
+      if (s.keys.ArrowRight) s.tx = s.x + 6;
+      s.tx = Math.max(10, Math.min(W - 10, s.tx)); s.x += (s.tx - s.x) * Math.min(1, .25 * k);
+      const speed = .55 + Math.min(1.6, s.t / 2400), every = Math.max(14, 46 - s.t / 120);
+      if ((s.spawn -= k) <= 0) {
+        s.spawn = every * (.6 + Math.random() * .8); const r = Math.random();
+        s.items.push({x: 6 + Math.random() * (W - 16), y: -8, v: speed * (.8 + Math.random() * .5), kind: r < .03 + Math.min(.05, s.t / 40000) ? 'gold' : r < .22 + Math.min(.18, s.t / 9000) ? 'bomb' : r < .4 ? 'note' : 'star'});
+      }
+      for (const it of s.items) {
+        it.y += it.v * k;
+        if (!it.gone && it.y > H - 22 && it.y < H - 8 && Math.abs(it.x + 3 - s.x) < 11) {
+          it.gone = true;
+          if (it.kind === 'bomb') { s.lives--; s.face = 'dizzy'; s.faceT = 50; if (s.lives <= 0) { s.face = 'sad'; draw(); return end(); } }
+          else { s.score += {star: 1, note: 2, gold: 5}[it.kind]; s.face = it.kind === 'gold' ? 'amazed' : 'joy'; s.faceT = 25; }
+        }
+      }
+      s.items = s.items.filter(it => !it.gone && it.y < H + 8);
+      if ((s.faceT -= k) <= 0) s.face = 'idle';
+      draw();
+    }
+    requestAnimationFrame(frame);
+  };
+  view.querySelector('.nmMsg').textContent = 'Attrape les étoiles et les notes, évite les bombes ! (souris ou ← →)';
+  requestAnimationFrame(frame);
+}
+function nmView() {
+  const box = el('div'); box.id = 'nmMain';
+  box.innerHTML = `<div class="nmCard"><img class="nmFace" alt=""><div><div class="label nmName"></div><div class="nmXp"><i></i></div><div class="hint nmXpTxt"></div></div></div>
+    <h3>PLUIE D'ÉTOILES</h3><canvas class="nmGame" width="160" height="100"></canvas><div class="row"><button class="btn main px nmPlay">▶ JOUER</button><span class="hint nmBest"></span></div><div class="hint nmMsg">Chaque partie rapporte de l'XP à NeoMe : plus il monte de niveau, plus sa garde-robe s'agrandit.</div>
+    <h3>GARDE-ROBE</h3><div class="nmWard"></div>`;
+  const wrap = view.querySelector('.appWrap'); wrap.classList.add('nmApp'); wrap.append(box);
+  box.querySelector('.nmPlay').onclick = nmPlay;
+  const g = box.querySelector('.nmGame').getContext('2d'); g.fillStyle = '#0e0820'; g.fillRect(0, 0, 160, 100);
+  nmRender();
+}
+if (window.neo && !W2) petStart().then(nmView).catch(e => console.error('pet:', e));
   // ---- fin ----
   view.querySelector('#nmToggle').onclick = () => petToggle();
   ctx.onClose(() => { document.getElementById('pet')?.remove(); document.getElementById('petStyle')?.remove(); });
