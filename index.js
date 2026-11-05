@@ -38,16 +38,22 @@ body.browsing #pet,body.browsing .petBall,body.browsing .petBallShadow,body.brow
 .petTitle{font:9px var(--title);color:var(--lilac);margin-bottom:6px} .petStat{display:grid;grid-template-columns:70px 1fr;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
 .petStat b{height:8px;background:rgba(0,0,0,.35);box-shadow:inset 0 0 0 1px var(--line2)} .petStat i{display:block;height:100%;background:var(--magenta)} .petMenu input{font:15px var(--text);padding:6px}
 .petCos{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;transform-origin:50% 85%}
-.petCos img{position:absolute;image-rendering:pixelated;height:auto}
+.petCos .cosL,.nmDoll .cosL,.nmMini .cosL{position:absolute;left:0;top:0;width:100%;height:auto;pointer-events:none}
+#pet .petCos .cosL:not([data-hp]){filter:none}
+.hpRainbow{animation:hpHue 4s linear infinite} @keyframes hpHue{to{filter:hue-rotate(360deg)}}
 @keyframes nmRainbow{0%{filter:drop-shadow(0 0 9px #ff4fa8) drop-shadow(0 6px 6px rgba(0,0,0,.45))}33%{filter:drop-shadow(0 0 9px #5ec8ff) drop-shadow(0 6px 6px rgba(0,0,0,.45))}66%{filter:drop-shadow(0 0 9px #ffd84a) drop-shadow(0 6px 6px rgba(0,0,0,.45))}}
-#pet.aura-rainbow>img{animation:nmRainbow 3s infinite!important}
-.nmApp .nmCard{display:flex;gap:18px;align-items:center;flex-wrap:wrap}.nmApp .nmCard img{width:96px}
+#pet.aura-rainbow>img,.nmApp .aura-rainbow>img:first-child{animation:nmRainbow 3s infinite!important}
 .nmApp .nmXp{height:12px;min-width:220px;background:rgba(0,0,0,.35);box-shadow:inset 0 0 0 2px var(--line2);margin:6px 0}.nmApp .nmXp i{display:block;height:100%;background:var(--pink)}
-.nmApp canvas.nmGame{width:640px;max-width:100%;image-rendering:pixelated;box-shadow:0 0 0 2px var(--line2);cursor:none;touch-action:none;display:block}
-.nmApp .nmWard{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
-.nmApp .nmItem{all:unset;cursor:var(--cp,pointer);display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;background:rgba(0,0,0,.25);box-shadow:inset 0 0 0 2px var(--line2);font:13px var(--text);color:var(--shell);text-align:center}
-.nmApp .nmItem canvas{width:64px;height:40px;image-rendering:pixelated;object-fit:contain}.nmApp .nmItem.on{box-shadow:inset 0 0 0 2px var(--pink);color:#fff}
-.nmApp .nmItem.locked{opacity:.45;cursor:default}.nmApp .nmItem small{color:var(--muted)}.nmApp h3{font:10px var(--title);color:var(--lilac);margin:18px 0 8px}`;
+.nmApp .nmDress{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;margin-top:14px}
+.nmApp .nmStage{position:sticky;top:10px;display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px 20px 14px;background:radial-gradient(circle at 50% 58%,rgba(var(--pkr),.22),transparent 68%),rgba(0,0,0,.25);box-shadow:inset 0 0 0 2px var(--line2)}
+.nmApp .nmDoll,.nmApp .nmMini{position:relative;line-height:0}.nmApp .nmDoll{width:256px}.nmApp .nmMini{width:76px}
+.nmApp .nmDoll>img:first-child,.nmApp .nmMini>img:first-child{width:100%;height:auto;filter:drop-shadow(0 6px 6px rgba(0,0,0,.45))}
+.nmApp .nmSide{flex:1;min-width:280px}.nmApp .nmTabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.nmApp .nmTab{all:unset;cursor:var(--cp,pointer);padding:5px 10px;font:13px var(--text);color:var(--muted);box-shadow:inset 0 0 0 2px var(--line2)}.nmApp .nmTab.on,.nmApp .nmTab:hover{color:#fff;box-shadow:inset 0 0 0 2px var(--pink)}
+.nmApp .nmWard{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px}
+.nmApp .nmItem{all:unset;cursor:var(--cp,pointer);display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 6px;background:rgba(0,0,0,.25);box-shadow:inset 0 0 0 2px var(--line2);font:13px var(--text);color:var(--shell);text-align:center}
+.nmApp .nmItem:hover{background:rgba(var(--pkr),.12)}.nmApp .nmItem.on{box-shadow:inset 0 0 0 2px var(--pink);color:#fff}
+.nmApp .nmItem.locked{cursor:default}.nmApp .nmItem.locked .nmMini{opacity:.4;filter:grayscale(.7)}.nmApp .nmItem small{color:var(--muted)}.nmApp h3{font:10px var(--title);color:var(--lilac);margin:0 0 10px}`;
 export default async function (ctx) {
   const view = ctx.view;
   if (!ctx.host) { view.textContent = "Ce plugin doit être approuvé par NeoDex pour s'ouvrir."; return; }
@@ -111,7 +117,7 @@ function petXp(n) {
 /* ---------- showing an expression ---------- */
 function petShowFace(name) {
   const [n, motion] = NM[name] || NM.idle;
-  if (petImg.dataset.face !== name) { petImg.src = __imgs[n + '.png']; petImg.dataset.face = name; }
+  if (petImg.dataset.face !== name) { petImg.dataset.face = name; cosFace(n); }
   if (petImg.dataset.motion !== motion) { petImg.className = petCos.className = ''; void petImg.offsetWidth; petImg.className = 'nm-' + motion; petCos.className = 'petCos nm-' + motion; petImg.dataset.motion = motion; }  // restarts the motion (the cosmetics move with it)
   petSt.mode = name;
 }
@@ -284,7 +290,7 @@ function petMenu(x, y) {
     ok.onclick = done; i.onkeydown = e => { if (e.key === 'Enter') done(); if (e.key === 'Escape') f.remove(); };
     f.append(el('div', 'petTitle', 'Son nom'), i, ok); Object.assign(f.style, {left: x + 'px', top: y + 'px'}); document.body.append(f); i.focus(); i.select();
   });
-  act('Garde-robe et Pluie d’étoiles…', () => newTab('plugin:neodex.neome'));
+  act('Garde-robe…', () => newTab('plugin:neodex.neome'));
   act('Mettre dans la barre des tâches', () => petToBar(true));
   act('Cacher (MENU pour le remettre)', () => { pet.hidden = true; petSave(); petShow(); });
   m.append(el('div', 'hint', `${pet.pets} câlins · ${pet.meals} repas · record à la balle : ${pet.ballBest || 0} · né le ${new Date(pet.born).toLocaleDateString('fr-FR')}`));
@@ -322,7 +328,7 @@ async function petStart() {
   pet = {...petNew(), ...(await __storeGet('pet').catch(() => null) || {})};
   if (pet.name === 'Osu') pet.name = 'NeoMe';  // the first pet's name
   petAge();
-  for (const [n] of Object.values(NM)) new Image().src = __imgs[n + '.png'];  // all the expressions ready: no blink when it changes face
+  for (const [n] of Object.values(NM)) { new Image().src = __imgs[n + '.png']; if (__nohp[n]) new Image().src = __nohp[n]; }  // all the expressions ready: no blink when it changes face
   petBox = el('div'); petBox.id = 'pet';
   petImg = el('img'); petImg.alt = ''; petImg.draggable = false;
   petCos = el('div', 'petCos');
@@ -382,144 +388,121 @@ async function petStart() {
   addEventListener('beforeunload', () => { petAge(); __storeSet('pet', pet); });
 }
 const petToggle = () => { if (!pet) return; if (pet.inBar) return petToBar(false); pet.hidden = !pet.hidden; petSave(); petShow(); petBarSync(); toast(pet.hidden ? pet.name + ' se cache' : pet.name + ' est de retour !'); if (!pet.hidden) { petSay('Me revoilà !'); petAct('hello', 2000); } };
-/* ---------- the wardrobe: pixel cosmetics unlocked by level, worn on the home page (a layer over the picture that moves with it) ---------- */
-// slot, name, level, where it sits on the picture (% of its width: left, top, width), pixels
-const COS_PAL = {k: '#14102a', r: '#e8344e', w: '#ffffff', d: '#2a2440', p: '#ff4fa8', c: '#5ec8ff', y: '#ffd84a', v: '#7a4cff', g: '#5ad05a', o: '#ff9a3c', m: '#8a80b0'};
-const COS = [
-  {id: 'cap', slot: 'hat', name: 'Casquette', lv: 2, at: [33, 9, 36], px: ['.....kkkkkkk......', '...kkrrrrrrrkk....', '..krrrrrwwrrrrk...', '.krrrrrrrrrrrrrk..', '.kkkkkkkkkkkkkkkkk', '..kddddddddddddddk']},
-  {id: 'bow', slot: 'hat', name: 'Nœud', lv: 3, at: [56, 12, 22], px: ['..kk......kk..', '.kppk....kppk.', 'kppppkkkkppppk', 'kpppkpwwpkpppk', 'kppppkkkkppppk', '.kppk....kppk.', '..kk......kk..']},
-  {id: 'round', slot: 'eyes', name: 'Lunettes rondes', lv: 4, at: [41, 38, 24], px: ['.yyyyy.......yyyyy.', 'y.....y.....y.....y', 'y.....yyyyyyy.....y', 'y.....y.....y.....y', '.yyyyy.......yyyyy.']},
-  {id: 'party', slot: 'hat', name: 'Chapeau de fête', lv: 5, at: [41, -2, 20], px: ['....yy....', '...yyyy...', '....kk....', '...kppk...', '...kpck...', '..kpccpk..', '..kcppck..', '.kppccppk.', '.kccppcck.', 'kppccppcck', 'kkkkkkkkkk']},
-  {id: 'shades', slot: 'eyes', name: 'Lunettes de soleil', lv: 6, at: [41, 38, 24], px: ['kkkkkkkkkkkkkkkkkkk', 'kdddwdk.....kdddwdk', 'kdddddk.....kdddddk', '.kdddk.......kdddk.', '..kkk.........kkk..']},
-  {id: 'pink', slot: 'aura', name: 'Aura rose', lv: 7, glow: '#ff4fa8'},
-  {id: 'crown', slot: 'hat', name: 'Couronne', lv: 8, at: [36, 5, 30], px: ['k......kk......k', 'kk....kyyk....kk', 'kyk..kyyyyk..kyk', 'kyyk.kyyyyk.kyyk', 'kyyykyyyyyykyyyk', 'kyyyyyyyyyyyyyyk', 'kyyrryyyyyyccyyk', 'kyyyyyyyyyyyyyyk', 'kkkkkkkkkkkkkkkk']},
-  {id: 'cyan', slot: 'aura', name: 'Aura glacée', lv: 9, glow: '#5ec8ff'},
-  {id: 'monocle', slot: 'eyes', name: 'Monocle', lv: 10, at: [57, 36, 10], px: ['..yyyy..', '.y....y.', 'y......y', 'y......y', 'y......y', '.y....y.', '..yyyy..', '......y.', '.......y']},
-  {id: 'wizard', slot: 'hat', name: 'Chapeau de sorcier', lv: 12, at: [34, -6, 32], px: ['.......kk.......', '......kvvk......', '......kvvk......', '.....kvvyvk.....', '.....kvvvvk.....', '....kvvvvvvk....', '....kvyvvvvk....', '...kvvvvvyvvk...', '...kvvvvvvvvk...', '..kvvvvvvvvvvk..', 'kkkkkkkkkkkkkkkk', 'kvvvvvvvvvvvvvvk', 'kkkkkkkkkkkkkkkk']},
-  {id: 'gold', slot: 'aura', name: 'Aura dorée', lv: 14, glow: '#ffd84a'},
-  {id: 'halo', slot: 'hat', name: 'Auréole', lv: 15, at: [34, 2, 32], px: ['...kkkkkkkkkk...', '.kkyyyyyyyyyykk.', 'kyy..........yyk', '.kkyyyyyyyyyykk.', '...kkkkkkkkkk...']},
-  {id: 'visor', slot: 'eyes', name: 'Visière néon', lv: 18, at: [37, 38, 32], px: ['.kkkkkkkkkkkkkkkkkk.', 'kcwcccccccccccccccck', 'kcccccccccccccccccck', '.kkkkkkkkkkkkkkkkkk.']},
-  {id: 'tophat', slot: 'hat', name: 'Haut-de-forme', lv: 20, at: [37, -4, 27], px: ['..kkkkkkkkkk..', '..kddddddddk..', '..kddddddddk..', '..kddddddddk..', '..kddddddddk..', '..kddddddddk..', '..krrrrrrrrk..', '..kddddddddk..', 'kkkkkkkkkkkkkk', 'kddddddddddddk', 'kkkkkkkkkkkkkk']},
-  {id: 'rainbow', slot: 'aura', name: 'Aura arc-en-ciel', lv: 25, glow: 'rainbow'},
+/* ---------- the wardrobe: cosmetics drawn by the Studio's AI on NeoMe himself (img/cos), unlocked by level, worn on the home page ---------- */
+// each one is a 320 x 330 layer cut from « NeoMe wearing it », so it sits exactly on his picture; head things follow the head (offsets per picture, in img/cos/items.json).
+// A hat takes his headphones off: img/nohp holds his 25 pictures without them. Coloured headphones are his own (img/hp, one per picture), recoloured.
+const COS_SLOTS = {tete: 'Tête', yeux: 'Yeux', casque: 'Casque', cou: 'Cou', coquille: 'Coquille', aura: 'Aura'};
+const COS_ORDER = ['coquille', 'cou', 'casque', 'yeux', 'tete'];  // drawn from back to front
+const COS_HEAD = new Set(['tete', 'yeux']);
+const COS_CODE = [
+  {id: 'casque_cyan', slot: 'casque', name: 'Casque néon cyan', lv: 3, hp: 'hue-rotate(-100deg) saturate(1.2)'},
+  {id: 'casque_citron', slot: 'casque', name: 'Casque citron', lv: 4, hp: 'hue-rotate(160deg) saturate(1.3) brightness(1.15)'},
+  {id: 'casque_rouge', slot: 'casque', name: 'Casque rouge', lv: 6, hp: 'hue-rotate(68deg) saturate(1.4)'},
+  {id: 'casque_bleu', slot: 'casque', name: 'Casque bleu électrique', lv: 8, hp: 'hue-rotate(-60deg) saturate(1.4)'},
+  {id: 'casque_argent', slot: 'casque', name: 'Casque argenté', lv: 11, hp: 'grayscale(1) brightness(1.45) contrast(1.1)'},
+  {id: 'casque_or', slot: 'casque', name: 'Casque doré', lv: 14, hp: 'sepia(1) saturate(4) hue-rotate(-12deg) brightness(1.1)'},
+  {id: 'casque_arc', slot: 'casque', name: 'Casque arc-en-ciel', lv: 16, hp: 'rainbow'},
+  {id: 'aura_rose', slot: 'aura', name: 'Aura rose', lv: 6, glow: '#ff4fa8'}, {id: 'aura_glace', slot: 'aura', name: 'Aura glacée', lv: 10, glow: '#5ec8ff'},
+  {id: 'aura_or', slot: 'aura', name: 'Aura dorée', lv: 13, glow: '#ffd84a'}, {id: 'aura_arc', slot: 'aura', name: 'Aura arc-en-ciel', lv: 16, glow: 'rainbow'},
 ];
-console.assert(COS.every(c => !c.px || c.px.every(r => r.length === c.px[0].length)) && new Set(COS.map(c => c.id)).size === COS.length, 'garde-robe');
-const cosImg = {};
-function cosSprite(c) {  // the pixels drawn once to a small canvas (1 px = 1 px, scaled up crisp by CSS)
-  if (cosImg[c.id]) return cosImg[c.id];
-  const cv = document.createElement('canvas'); cv.width = c.px[0].length; cv.height = c.px.length; const g = cv.getContext('2d');
-  c.px.forEach((r, y) => [...r].forEach((ch, x) => { if (COS_PAL[ch]) { g.fillStyle = COS_PAL[ch]; g.fillRect(x, y, 1, 1); } }));
-  return cosImg[c.id] = cv.toDataURL();
+let COS = [...COS_CODE], COS_OFF = {};
+const cosUrl = {}, __nohp = {}, __hp = {};
+const blobUrl = async p => URL.createObjectURL(new Blob([Uint8Array.from(atob(await neo.pluginFileRead(ctx.id, p)), ch => ch.charCodeAt(0))], {type: 'image/png'}));
+async function cosLoad() {
+  const meta = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(await neo.pluginFileRead(ctx.id, 'img/cos/items.json')), ch => ch.charCodeAt(0))));
+  COS_OFF = meta.offsets || {};
+  COS = [...meta.items, ...COS_CODE].sort((a, b) => a.lv - b.lv);
+  await Promise.all([...meta.items.map(async c => { cosUrl[c.id] = await blobUrl('img/cos/' + c.id + '.png'); }),
+    ...Array.from({length: 25}, (_, i) => i + 1).map(async n => { __nohp[n] = await blobUrl('img/nohp/' + n + '.png'); __hp[n] = await blobUrl('img/hp/' + n + '.png'); })]);
 }
-const cosOn = () => pet.cos || (pet.cos = {hat: '', eyes: '', aura: ''});
-function cosWear() {
-  if (!petCos) return;
-  petCos.replaceChildren(); petImg.style.filter = ''; petBox.classList.remove('aura-rainbow');
-  for (const [slot, id] of Object.entries(cosOn())) {
-    const c = COS.find(o => o.id === id && o.slot === slot); if (!c || petLevel(pet.xp) < c.lv) continue;
-    if (c.glow === 'rainbow') petBox.classList.add('aura-rainbow');
-    else if (c.glow) petImg.style.filter = `drop-shadow(0 0 9px ${c.glow}) drop-shadow(0 6px 6px rgba(0,0,0,.45))`;
-    else { const i = el('img'); i.src = cosSprite(c); Object.assign(i.style, {left: c.at[0] + '%', top: c.at[1] + '%', width: c.at[2] + '%'}); petCos.append(i); }
+const cosOn = () => (pet.wear && typeof pet.wear === 'object') ? pet.wear : (pet.wear = {});
+const cosOk = c => !!c && petLevel(pet.xp) >= c.lv;
+const cosWorn = () => Object.fromEntries(Object.entries(cosOn()).filter(([, id]) => cosOk(COS.find(o => o.id === id))));
+const auraFilter = a => a && a.glow !== 'rainbow' ? `drop-shadow(0 0 9px ${a.glow}) drop-shadow(0 6px 6px rgba(0,0,0,.45))` : '';
+const bare = wear => !!(wear.tete || wear.casque);  // without his own headphones: a hat, or recoloured ones
+const faceSrc = (wear, n) => bare(wear) && __nohp[n] ? __nohp[n] : __imgs[n + '.png'];
+// an outfit: the base picture (with or without headphones) and the layers on top; face: which of the 25 pictures
+function cosLayers(box, base, wear, face = 1) {
+  box.querySelectorAll('.cosL').forEach(n => n.remove());
+  base.src = faceSrc(wear, face);
+  const [dx, dy] = COS_OFF[face] || [0, 0];
+  for (const slot of COS_ORDER) {
+    const c = COS.find(o => o.id === wear[slot]); if (!c) continue;
+    const src = c.hp ? __hp[face] : cosUrl[c.id]; if (!src) continue;
+    const i = el('img', 'cosL' + (c.hp === 'rainbow' ? ' hpRainbow' : '')); i.src = src; i.alt = '';
+    if (c.hp) { i.dataset.hp = 1; if (c.hp !== 'rainbow') i.style.filter = c.hp; }
+    else if (COS_HEAD.has(slot)) { i.dataset.head = 1; Object.assign(i.style, {left: dx / 3.2 + '%', top: dy / 3.3 + '%'}); }
+    box.append(i);
   }
+}
+function cosFace(n) {  // the pet changes face: its base picture, its headphones and what sits on its head follow
+  const wear = cosWorn(), [dx, dy] = COS_OFF[n] || [0, 0];
+  petImg.src = faceSrc(wear, n);
+  petCos.querySelectorAll('.cosL[data-hp]').forEach(i => { i.src = __hp[n]; });
+  petCos.querySelectorAll('.cosL[data-head]').forEach(i => Object.assign(i.style, {left: dx / 3.2 + '%', top: dy / 3.3 + '%'}));
+}
+function cosWear() {
+  if (!petCos || !pet) return;
+  const wear = cosWorn(), a = COS.find(o => o.id === wear.aura);
+  cosLayers(petCos, petImg, wear, (NM[petSt.mode] || NM.idle)[0]);
+  petBox.classList.toggle('aura-rainbow', a?.glow === 'rainbow'); petImg.style.filter = auraFilter(a);
 }
 function cosToggle(c) {
-  if (petLevel(pet.xp) < c.lv) return;
-  const on = cosOn(); on[c.slot] = on[c.slot] === c.id ? '' : c.id; petSave(); cosWear(); nmRender();
-  if (on[c.slot]) { petAct('cool', 1800); petSay(['Trop classe !', 'Ça me va bien ?', 'Stylé !'][Math.random() * 3 | 0], 1800); }
+  if (!cosOk(c)) return;
+  const on = cosOn(); on[c.slot] = on[c.slot] === c.id ? '' : c.id;
+  if (on[c.slot] && c.slot === 'tete') on.casque = '';  // a hat or headphones, not both
+  if (on[c.slot] && c.slot === 'casque') on.tete = '';
+  petSave(); cosWear(); nmRender();
+  if (on[c.slot]) { petAct('cool', 1800); petSay(['Trop classe !', 'Ça me va bien ?', 'Stylé !', 'J’adore !'][Math.random() * 4 | 0], 1800); }
 }
 
-/* ---------- the plugin's tab: its level, the wardrobe, and the « Pluie d'étoiles » game (stars to catch, bombs to dodge: XP for NeoMe) ---------- */
-let nmGame = null;
+/* ---------- the plugin's tab: its level and the wardrobe (a big NeoMe to dress, items by slot, hover one to try it on) ---------- */
+let nmSlot = 'tout', nmTry = null;
+function nmDoll(box, wear) {
+  const a = COS.find(o => o.id === wear.aura), base = box.querySelector('img');
+  cosLayers(box, base, wear); box.classList.toggle('aura-rainbow', a?.glow === 'rainbow'); base.style.filter = auraFilter(a);
+}
+function nmTryOn() {  // what the big NeoMe shows: what he wears, plus the item under the pointer (a hat takes the headphones off)
+  const w = cosWorn(); if (!nmTry) return w;
+  const t = {...w, [nmTry.slot]: nmTry.id};
+  if (nmTry.slot === 'tete') delete t.casque;
+  if (nmTry.slot === 'casque') delete t.tete;
+  return t;
+}
+const nmPreview = () => { const box = view.querySelector('.nmDoll'); if (box) nmDoll(box, nmTryOn()); };
 function nmRender() {
   const box = view.querySelector('#nmMain'); if (!box || !pet) return;
-  const lv = petLevel(pet.xp), lo = 8 * (lv - 1) ** 2, hi = 8 * lv ** 2;
+  const lv = petLevel(pet.xp), lo = 8 * (lv - 1) ** 2, hi = 8 * lv ** 2, on = cosOn(), next = COS.find(c => c.lv > lv);
   box.querySelector('.nmName').textContent = pet.name + ' · niveau ' + lv;
   box.querySelector('.nmXp i').style.width = Math.round((pet.xp - lo) / (hi - lo) * 100) + '%';
-  box.querySelector('.nmXpTxt').textContent = `${pet.xp - lo} / ${hi - lo} XP vers le niveau ${lv + 1} · ${COS.filter(c => c.lv <= lv).length} / ${COS.length} cosmétiques`;
-  box.querySelector('.nmFace').src = __imgs['1.png'];
-  box.querySelector('.nmBest').textContent = 'Record : ' + (pet.starBest || 0);
-  const ward = box.querySelector('.nmWard'), on = cosOn(); ward.replaceChildren();
-  for (const c of COS) {
-    const b = el('button', 'nmItem' + (lv < c.lv ? ' locked' : '') + (on[c.slot] === c.id ? ' on' : '')), cv = el('canvas');
-    cv.width = 32; cv.height = 20; const g = cv.getContext('2d');
-    if (c.glow) (c.glow === 'rainbow' ? ['#ff4fa8', '#ffd84a', '#5ec8ff'] : [c.glow, c.glow, c.glow]).forEach((col, i) => { g.fillStyle = col; g.fillRect(8 + i * 6, 4 + (i % 2) * 3, 4, 12); });
-    else { const im = new Image(); im.onload = () => { const k = Math.min(32 / im.width, 20 / im.height); g.imageSmoothingEnabled = false; g.drawImage(im, (32 - im.width * k) / 2, (20 - im.height * k) / 2, im.width * k, im.height * k); }; im.src = cosSprite(c); }
-    b.append(cv, el('span', '', c.name), el('small', '', lv < c.lv ? 'niveau ' + c.lv : on[c.slot] === c.id ? 'porté ✓' : {hat: 'tête', eyes: 'yeux', aura: 'aura'}[c.slot]));
-    b.onclick = () => cosToggle(c); ward.append(b);
+  box.querySelector('.nmXpTxt').textContent = `${pet.xp - lo} / ${hi - lo} XP vers le niveau ${lv + 1} · ${COS.filter(c => c.lv <= lv).length} / ${COS.length} cosmétiques` + (next ? ` · prochain : ${next.name} (niveau ${next.lv})` : '');
+  box.querySelector('.nmTabs').replaceChildren(...['tout', ...Object.keys(COS_SLOTS)].map(s => {
+    const b = el('button', 'nmTab' + (nmSlot === s ? ' on' : ''), s === 'tout' ? 'Tout' : COS_SLOTS[s]);
+    b.onclick = () => { nmSlot = s; nmRender(); }; return b;
+  }));
+  const ward = box.querySelector('.nmWard'); ward.replaceChildren();
+  for (const c of COS.filter(c => nmSlot === 'tout' || c.slot === nmSlot)) {
+    const ok = cosOk(c), worn = on[c.slot] === c.id;
+    const b = el('button', 'nmItem' + (ok ? '' : ' locked') + (worn ? ' on' : '')), mini = el('div', 'nmMini'), face = el('img');
+    face.alt = ''; mini.append(face); nmDoll(mini, {[c.slot]: c.id});
+    b.append(mini, el('span', '', c.name), el('small', '', !ok ? '🔒 niveau ' + c.lv : worn ? 'porté ✓' : COS_SLOTS[c.slot]));
+    b.onclick = () => cosToggle(c);
+    b.onpointerenter = () => { nmTry = c; nmPreview(); }; b.onpointerleave = () => { nmTry = null; nmPreview(); };
+    ward.append(b);
   }
-}
-// the game: 160 x 100 pixels, shown at 4x; NeoMe follows the mouse (or ← →)
-const STAR = ['...y...', '..yyy..', 'yyyyyyy', '.yyyyy.', '.yy.yy.', 'y.....y'], BOMB = ['....o.', '...m..', '.mmmm.', 'mmwrmm', 'mmrrrm', 'mmmmmm', '.mmmm.'], NOTE = ['..ppp', '..p.p', '..p.p', 'ppp.p', 'ppp..'];
-function nmDraw(g, px, x, y, col) { px.forEach((r, j) => [...r].forEach((ch, i) => { if (ch !== '.') { g.fillStyle = col && ch === 'y' ? col : COS_PAL[ch]; g.fillRect(x + i, y + j, 1, 1); } })); }
-function nmPlay() {
-  const cv = view.querySelector('.nmGame'), g = cv.getContext('2d'), W = 160, H = 100;
-  const faces = {}; for (const k of ['joy', 'dizzy', 'sad', 'amazed', 'idle']) { faces[k] = new Image(); faces[k].src = __imgs[NM[k][0] + '.png']; }
-  if (nmGame) nmGame.stop();
-  const s = nmGame = {x: W / 2, tx: W / 2, items: [], score: 0, lives: 3, t: 0, face: 'idle', faceT: 0, over: false, last: performance.now(), keys: {}, spawn: 0};
-  const move = e => { const r = cv.getBoundingClientRect(); s.tx = (e.clientX - r.left) / r.width * W; };
-  cv.onpointermove = move; cv.onpointerdown = move;
-  const kd = e => { if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && view.offsetParent) { s.keys[e.key] = e.type === 'keydown'; e.preventDefault(); } };
-  addEventListener('keydown', kd); addEventListener('keyup', kd);
-  s.stop = () => { s.over = true; removeEventListener('keydown', kd); removeEventListener('keyup', kd); };
-  const end = () => {
-    s.stop();
-    const xp = Math.min(80, Math.floor(s.score / 3)), rec = s.score > (pet.starBest || 0);
-    if (rec) pet.starBest = s.score;
-    pet.joy = petClamp(pet.joy + 10); pet.energy = petClamp(pet.energy - 5);
-    if (xp) petXp(xp); else petSave();
-    nmRender(); view.querySelector('.nmMsg').textContent = `Partie finie : ${s.score} points${rec ? ' · nouveau record !' : ''} · +${xp} XP pour ${pet.name}`;
-    petAct(rec ? 'amazed' : 'content', 2000);
-  };
-  function draw() {
-    g.fillStyle = '#0e0820'; g.fillRect(0, 0, W, H);
-    for (let i = 0; i < 40; i++) { const x = (i * 37) % W, y = (i * 53 + s.t * (.1 + (i % 3) * .08)) % H; g.fillStyle = i % 3 ? '#2a2050' : '#3a2f6a'; g.fillRect(x | 0, y | 0, 1, 1); }
-    g.fillStyle = '#231a44'; g.fillRect(0, H - 6, W, 6);
-    for (const it of s.items) nmDraw(g, it.kind === 'bomb' ? BOMB : it.kind === 'note' ? NOTE : STAR, it.x | 0, it.y | 0, it.kind === 'gold' ? ((s.t / 6 | 0) % 2 ? '#ffffff' : '#ffd84a') : null);
-    g.imageSmoothingEnabled = true; g.drawImage(faces[s.face] || faces.idle, (s.x - 12) | 0, H - 28, 24, 25); g.imageSmoothingEnabled = false;
-    g.fillStyle = '#fff'; g.font = '8px monospace'; g.fillText(String(s.score), 4, 10);
-    for (let i = 0; i < 3; i++) { g.fillStyle = i < s.lives ? '#ff4fa8' : '#3a2f6a'; g.fillRect(W - 8 - i * 7, 4, 5, 5); }
-  }
-  const frame = now => {
-    if (s.over) return;
-    if (!view.isConnected) return s.stop();
-    const k = Math.min(3, (now - s.last) / 16.7); s.last = now;
-    if (view.offsetParent) {  // paused while the tab is hidden
-      s.t += k;
-      if (s.keys.ArrowLeft) s.tx = s.x - 6;
-      if (s.keys.ArrowRight) s.tx = s.x + 6;
-      s.tx = Math.max(10, Math.min(W - 10, s.tx)); s.x += (s.tx - s.x) * Math.min(1, .25 * k);
-      const speed = .55 + Math.min(1.6, s.t / 2400), every = Math.max(14, 46 - s.t / 120);
-      if ((s.spawn -= k) <= 0) {
-        s.spawn = every * (.6 + Math.random() * .8); const r = Math.random();
-        s.items.push({x: 6 + Math.random() * (W - 16), y: -8, v: speed * (.8 + Math.random() * .5), kind: r < .03 + Math.min(.05, s.t / 40000) ? 'gold' : r < .22 + Math.min(.18, s.t / 9000) ? 'bomb' : r < .4 ? 'note' : 'star'});
-      }
-      for (const it of s.items) {
-        it.y += it.v * k;
-        if (!it.gone && it.y > H - 22 && it.y < H - 8 && Math.abs(it.x + 3 - s.x) < 11) {
-          it.gone = true;
-          if (it.kind === 'bomb') { s.lives--; s.face = 'dizzy'; s.faceT = 50; if (s.lives <= 0) { s.face = 'sad'; draw(); return end(); } }
-          else { s.score += {star: 1, note: 2, gold: 5}[it.kind]; s.face = it.kind === 'gold' ? 'amazed' : 'joy'; s.faceT = 25; }
-        }
-      }
-      s.items = s.items.filter(it => !it.gone && it.y < H + 8);
-      if ((s.faceT -= k) <= 0) s.face = 'idle';
-      draw();
-    }
-    requestAnimationFrame(frame);
-  };
-  view.querySelector('.nmMsg').textContent = 'Attrape les étoiles et les notes, évite les bombes ! (souris ou ← →)';
-  requestAnimationFrame(frame);
+  nmPreview();
 }
 function nmView() {
   const box = el('div'); box.id = 'nmMain';
-  box.innerHTML = `<div class="nmCard"><img class="nmFace" alt=""><div><div class="label nmName"></div><div class="nmXp"><i></i></div><div class="hint nmXpTxt"></div></div></div>
-    <h3>PLUIE D'ÉTOILES</h3><canvas class="nmGame" width="160" height="100"></canvas><div class="row"><button class="btn main px nmPlay">▶ JOUER</button><span class="hint nmBest"></span></div><div class="hint nmMsg">Chaque partie rapporte de l'XP à NeoMe : plus il monte de niveau, plus sa garde-robe s'agrandit.</div>
-    <h3>GARDE-ROBE</h3><div class="nmWard"></div>`;
+  box.innerHTML = `<div class="nmCard"><div><div class="label nmName"></div><div class="nmXp"><i></i></div><div class="hint nmXpTxt"></div>
+    <div class="hint">Il gagne de l'XP quand tu t'occupes de lui : câlins, repas, balle, musique… Passe sur un objet pour l'essayer, clique pour le porter. Un chapeau remplace son casque.</div></div></div>
+    <div class="nmDress"><div class="nmStage"><div class="nmDoll"><img alt=""></div><button class="btn px nmOff">Tout retirer</button></div>
+    <div class="nmSide"><h3>GARDE-ROBE</h3><div class="nmTabs"></div><div class="nmWard"></div></div></div>`;
+  box.querySelector('.nmOff').onclick = () => { pet.wear = {}; petSave(); cosWear(); nmRender(); };
   const wrap = view.querySelector('.appWrap'); wrap.classList.add('nmApp'); wrap.append(box);
-  box.querySelector('.nmPlay').onclick = nmPlay;
-  const g = box.querySelector('.nmGame').getContext('2d'); g.fillStyle = '#0e0820'; g.fillRect(0, 0, 160, 100);
   nmRender();
 }
-if (window.neo && !W2) petStart().then(nmView).catch(e => console.error('pet:', e));
+if (window.neo && !W2) cosLoad().catch(e => console.error('garde-robe:', e)).then(petStart).then(nmView).catch(e => console.error('pet:', e));
   // ---- fin ----
   view.querySelector('#nmToggle').onclick = () => petToggle();
   ctx.onClose(() => { document.getElementById('pet')?.remove(); document.getElementById('petStyle')?.remove(); });
